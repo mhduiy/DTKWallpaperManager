@@ -14,6 +14,8 @@
 #include <DScrollArea>
 #include <QImage>
 #include <QThreadPool>
+#include <QNetworkAccessManager>
+#include <DSpinner>
 #include "global.h"
 
 DWIDGET_USE_NAMESPACE //使用DWidget命名空间
@@ -26,7 +28,7 @@ public:
     void initUI();  //初始化ui
     void readImgFromFile(const QString &filePath, int index, imgType type);    //读取本地图片文件
     void readLocalWallPaper();  //读取本地壁纸文件
-//    void readOnlineImg();  //读取在线图片
+    void readOnlineWallPaper();  //读取在线壁纸
     void showImgs(const QList<QString> &filePaths, int currentIndex);  //显示图片在流式布局中
     void removeAllImgs(imgType type);// 移除所有图片
     void test();
@@ -40,6 +42,7 @@ public slots:
 
 private slots:
     void acceptReadFinish(int index, imgType type, QImage* img);    //接收读取成功的消息
+//    void acceptDownloadFinish(int index, QImage *img);
     void showDetailImg(int index, imgType type); //显示大图
     bool setWallPaper(int index, imgType type);     //设置壁纸
 
@@ -61,11 +64,10 @@ private:
     DScrollArea *scrollareaLocal;
     DScrollArea *scrollareaOnline;
 
+    QNetworkAccessManager  *networkAccessManager;   //网络连接管理
+
     QVector<DIconButton*> imgsLocal;    //本地图片
     QVector<DIconButton*> imgsOnline;   //在线图片
-
-    QVector<QString> imgsLocalPath;     //本地图片路径
-    QVector<QString> imgsOnlinePath;    //在线图片在本地存放的路径
 
     QHash<int, QImage*> imgsLocalMap;   //从硬盘读取的本地图片
     QHash<int, QImage*> imgsOnlineMap;  //从硬盘中读取的在线图片
@@ -73,8 +75,11 @@ private:
     DPushButton *returnBtn;             //返回按键
     DPushButton *funcBtn;               //功能按键（刷新页面，设置壁纸）
 
+    DSpinner *spinner;                  //加载spinner
+
     int imgDetailIndex;                 //当前显示大图图片的index
     imgType imgDetailType;              //当前显示大图图片的类型
+    bool isFirstOnline = true;          //是否是第一次浏览在线图片
 };
 
 #endif // MAINWINDOWS_H

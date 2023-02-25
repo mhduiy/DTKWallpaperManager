@@ -35,6 +35,7 @@ add_executable(${PROJECT_NAME}
 target_link_libraries(DTKWallpaperManager PRIVATE
     Qt5::Widgets
     Qt5::Gui
+    Qt5::Network
     ${DtkGui_LIBRARIES}
     ${DtkCore_LIBRARIES}
     ${DtkWidget_LIBRARIES}
