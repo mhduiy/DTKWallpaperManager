@@ -3,7 +3,10 @@
 #include <QDebug>
 FileRead::FileRead(const QString &filePath, int index, imgType type)
 {
-    this->setAutoDelete(true);  //设置自动析构
+    //设置线程完成自动析构
+    this->setAutoDelete(true);
+
+    //保存参数
     this->index = index;
     this->filePath  = filePath;
     this->type = type;
@@ -16,12 +19,17 @@ FileRead::~FileRead()
 
 void FileRead::run()
 {
+    //创建一个QImage对象，保存图片
     QImage *img = new QImage();
-    if(!img->load(filePath)) {  //如果读取失败
+    //如果读取失败
+    if(!img->load(filePath)) {
+        //发送读取失败的信号
         emit readFailed(index, this->type);
-        delete img; //释放指针指向内存
+        //释放内存并退出函数
+        delete img;
         return;
     }
+    //读取成功，发送读取成功信号和图片内存地址
     else {
         emit readFinished(index, this->type, img);   //读取成功
     }
