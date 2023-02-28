@@ -27,21 +27,19 @@ public:
     ~MainWindow() override;
     void initUI();  //初始化ui
     void readImgFromFile(const QString &filePath, int index, imgType type);    //读取本地图片文件
-    void readLocalWallPaper();  //读取本地壁纸文件
-    void readOnlineWallPaper();  //读取在线壁纸
-    void removeAllImgs(imgType type);// 移除所有图片
+    void readLocalWallPaper();          //读取本地壁纸文件
+    void readOnlineWallPaper();         //读取在线壁纸
+    void removeAllImgs(imgType type);   //移除所有图片内存
     void setCorrectBtnToUI(imgType type, int sum);  //提前设置按钮在前端显示
+    void setScreenInfo(const QRect &rect, const QString &name);
 
 protected:
     void resizeEvent(QResizeEvent *event) override;
 
-public slots:
-    void MysetCurrentIndex(int index);
-
 private slots:
     void acceptReadFinish(int index, imgType type, QImage* img);    //接收读取成功的消息
-//    void acceptDownloadFinish(int index, QImage *img);
-    void showDetailImg(int index, imgType type); //显示大图
+    void acceptDLFailed(int index);                 //接收下载失败的信号
+    void showDetailImg(int index, imgType type);    //显示大图
     bool setWallPaper(int index, imgType type);     //设置壁纸
 
 private:
@@ -79,6 +77,8 @@ private:
     int imgDetailIndex;                 //当前显示大图图片的index
     imgType imgDetailType;              //当前显示大图图片的类型
     bool isFirstOnline = true;          //是否是第一次浏览在线图片
+    QRect priScreenRect;                //当前显示器的分辨率
+    QString priScreenName;              //当前的显示器的name
 };
 
 #endif // MAINWINDOWS_H

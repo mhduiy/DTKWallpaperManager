@@ -17,6 +17,10 @@
 const QString LOCALWALLPAPERPATH = "/usr/share/wallpapers/deepin";
 //设置DIconButton及其Icon(界面的图片按钮)的默认大小
 const QSize ICONBTNSIZE(300,200);
+//DIconButton 的样式
+const QString BTNSTYLE = "background-color: rgba(0, 0, 0, 0.055);border: 0px;";
+//填写client_id
+const QString client_id = "1bld7WzB18JZCImZ2lTUhbXxI8_zrA9ju36e9HmKgWc";
 
 MainWindow::MainWindow(QWidget *parent) : DMainWindow (parent)
 {
@@ -41,15 +45,19 @@ MainWindow::~MainWindow()
 void MainWindow::initUI()
 {
     //设置titleBar部分
-    returnBtn = new DPushButton("返回");
+    returnBtn = new DPushButton();
     funcBtn = new DPushButton("再来一组");
-    spinner = new DSpinner;
+    spinner = new DSpinner();
     saveBtn = new DPushButton("保存壁纸");
     //设置加入titlebar各个组件的默认大小
-    returnBtn->setFixedWidth(50);
+    returnBtn->setFixedWidth(40);
     saveBtn->setFixedWidth(80);
     funcBtn->setFixedWidth(80);
     spinner->setFixedSize(30,30);
+
+    returnBtn->setIcon(QIcon(":/images/left-arrow.png"));
+    returnBtn->setIconSize(QSize(20,20));
+
     //将设置的组件默认隐藏
     returnBtn->hide();
     funcBtn->hide();
@@ -168,8 +176,6 @@ void MainWindow::initUI()
 
     //图片显示界面stackedwidget被切换，也就是浏览本地壁纸和在线壁纸的界面被切换
     connect(imgStacked, &DStackedWidget::currentChanged, [this](int index){
-        //刷新设置流式布局的窗口大小，防止界面显示不正确
-        this->resizeImgStackedWidget();
         //本地壁纸界面，隐藏功能按钮
         if(index == 0) {
             this->funcBtn->hide();
@@ -184,6 +190,8 @@ void MainWindow::initUI()
                 this->isFirstOnline = false;
             }
         }
+        //刷新设置流式布局的窗口大小，防止界面显示不正确
+        this->resizeImgStackedWidget();
     });
 
     //功能按键被按下【再来一组或者保存壁纸】
@@ -283,7 +291,7 @@ void MainWindow::readOnlineWallPaper()
 
     //拼接api的url
     QString url = "https://api.unsplash.com/photos/?";
-    QString client_id = "1bld7WzB18JZCImZ2lTUhbXxI8_zrA9ju36e9HmKgWc";
+
     url.append("client_id=").append(client_id);
     url.append("&per_page=30");
     QNetworkRequest request(url);
@@ -301,7 +309,6 @@ void MainWindow::readOnlineWallPaper()
         spinner->hide();
         //获取成功后，进行json解析，获取图片url
         QJsonArray array = QJsonDocument::fromJson(reply->readAll()).array();
-
          //未知原因，该connect会被调用两次，这里过滤无效的一次
         if(array.size() <= 0) {
             return;
@@ -321,7 +328,7 @@ void MainWindow::readOnlineWallPaper()
                     url = url.left(url.indexOf("&q="));
                     url = url.right(url.size()-28);
                     url = QString("https://dogefs.s3.ladydaily.com/~/source/unsplash/") + url;
-                    url.append("&q=100&w=1920&h=1080");
+                    url.append(QString("&q=100&w=%1&h=%2").arg(priScreenRect.width()).arg(priScreenRect.height()));
                     //子线程中下载，将信息传送过去
                     DownloadImage *runner = new DownloadImage(url, i);
                     //建立子线程下载成功的连接
@@ -347,10 +354,16 @@ void MainWindow::showDetailImg(int index, imgType type)
 
     //根据点击信息判断从本地壁纸map中寻找img还是在线壁纸map中寻找img
     if(type == imgType::LOCAL) {
+        if(imgsLocalMap.find(index) == imgsLocalMap.end()) {
+            return;
+        }
         //将找到的img放到imgViewer中显示
         imgViewer->setImage(*imgsLocalMap.find(index).value());
     }
     else {
+        if(imgsOnlineMap.find(index) == imgsOnlineMap.end()) {
+            return;
+        }
         imgViewer->setImage(*imgsOnlineMap.find(index).value());
     }
     //设置默认缩放比例
@@ -385,10 +398,11 @@ bool MainWindow::setWallPaper(int index, imgType type)
     }
 
     //dbus设置壁纸
-    QString setWallpaper = QString("for screen in  `xrandr|grep ' connected'|awk '{print $1}'`; do dbus-send --dest=com.deepin.daemon.Appearance /com/deepin/daemon/Appearance --print-reply com.deepin.daemon.Appearance.SetMonitorBackground string:$screen string:'")
-            .append(filePath).append("';done");
+    QString setWallpaperCmd = QString("dbus-send --dest=com.deepin.daemon.Appearance /com/deepin/daemon/Appearance --print-reply com.deepin.daemon.Appearance.SetMonitorBackground string:%1 string:'%2'")
+            .arg(this->priScreenName)
+            .arg(filePath);
     //设置参数
-    options << "-c" << setWallpaper;
+    options << "-c" << setWallpaperCmd;
     //调用外部程序，设置壁纸
     QProcess::execute("/bin/bash",options);
 
@@ -467,6 +481,8 @@ void MainWindow::setCorrectBtnToUI(imgType type, int sum)
             imgsLocal[i]->setFixedSize(ICONBTNSIZE);
             //设置按钮图标大小
             imgsLocal[i]->setIconSize(ICONBTNSIZE);
+            //设置按钮样式
+            imgsLocal[i]->setStyleSheet(BTNSTYLE);
             //添加到对应流式布局
             this->imgFlowLocal->addWidget(imgsLocal[i]);
 
@@ -481,6 +497,8 @@ void MainWindow::setCorrectBtnToUI(imgType type, int sum)
         this->imgsOnline.resize(sum);
         for(int i = 0; i < imgsOnline.size(); i++) {
             imgsOnline[i] = new DIconButton();
+            //设置按钮样式
+            imgsOnline[i]->setStyleSheet(BTNSTYLE);
             imgsOnline[i]->setFixedSize(ICONBTNSIZE);
             imgsOnline[i]->setIconSize(ICONBTNSIZE);
             this->imgFlowOnline->addWidget(imgsOnline[i]);
@@ -508,14 +526,15 @@ void MainWindow::setCorrectBtnToUI(imgType type, int sum)
     resizeImgStackedWidget();
 }
 
+void MainWindow::setScreenInfo(const QRect &rect, const QString &name)
+{
+    this->priScreenRect = rect;
+    this->priScreenName = name;
+}
+
 //主窗口大小发生变化时，更新设置流式布局的窗口大小
 void MainWindow::resizeEvent(QResizeEvent *event) {
     resizeImgStackedWidget();
-}
-
-void MainWindow::MysetCurrentIndex(int index)
-{
-    qInfo() << index;
 }
 
 //接收成功读取的信号，包括本地的（读取成功）和在线的（下载成功）
@@ -538,6 +557,13 @@ void MainWindow::acceptReadFinish(int index, imgType type, QImage* img)
             }
             break;
     }
+}
+
+//接收下载失败的信号
+void MainWindow::acceptDLFailed(int index)
+{
+    DStyle *style = new DStyle;
+    this->imgsOnline[index]->setIcon(style->standardIcon(DStyle::SP_CloseButton));
 }
 
 
