@@ -21,6 +21,8 @@ const QSize ICONBTNSIZE(300,200);
 const QString BTNSTYLE = "background-color: rgba(0, 0, 0, 0.055);border: 0px;";
 //填写client_id
 const QString client_id = "1bld7WzB18JZCImZ2lTUhbXxI8_zrA9ju36e9HmKgWc";
+//刘布局space大小
+const int spaceSize = 20;
 
 MainWindow::MainWindow(QWidget *parent) : DMainWindow (parent)
 {
@@ -82,7 +84,10 @@ void MainWindow::initUI()
     model->appendRow(new DStandardItem("本地壁纸"));
     model->appendRow(new DStandardItem("在线壁纸"));
     funcModLV->setModel(model);
+    //设置固定大小
     funcModLV->setFixedWidth(150);
+    //设置DListView不可编辑
+    funcModLV->setEditTriggers(DListView::EditTrigger::NoEditTriggers);
 
     //右侧图片流显示区域
     //新建滚动区域
@@ -92,23 +97,36 @@ void MainWindow::initUI()
     imgStacked  = new DStackedWidget();
     imgWidgetLocal = new DWidget();
     imgWidgetOnline = new DWidget();
-    imgFlowLocal = new DFlowLayout();
-    imgFlowOnline = new DFlowLayout();
+
+    imgFlowLocal = new DFlowLayout(imgWidgetLocal);
+    imgFlowOnline = new DFlowLayout(imgWidgetOnline);
 
     //设置流式布局属性
     imgFlowLocal->setSpacing(20);
     imgFlowOnline->setSpacing(20);
-    //设置flow方向
-    imgFlowLocal->setFlow(QListView::Flow::LeftToRight);
-    imgFlowOnline->setFlow(QListView::Flow::LeftToRight);
+
 
     //将本地和在线的图片窗口设置为流式布局
     imgWidgetLocal->setLayout(imgFlowLocal);
     imgWidgetOnline->setLayout(imgFlowOnline);
 
-    //将两个流式布局的窗口添加到滚动区域中
-    scrollareaLocal->setWidget(imgWidgetLocal);
-    scrollareaOnline->setWidget(imgWidgetOnline);
+    //新建一个窗体，内部存放流布局的另外一个widget，可实现流布局窗口的居中
+    QVBoxLayout *localVLayout = new QVBoxLayout();
+    //设置居中
+    localVLayout->setAlignment(Qt::AlignHCenter);
+    imgfixWidgetLocal = new DWidget();
+    localVLayout->addWidget(imgWidgetLocal);
+    imgfixWidgetLocal->setLayout(localVLayout);
+
+    QVBoxLayout *onlineVLayout = new QVBoxLayout();
+    onlineVLayout->setAlignment(Qt::AlignHCenter);
+    imgfixWidgetOnline = new DWidget();
+    onlineVLayout->addWidget(imgWidgetOnline);
+    imgfixWidgetOnline->setLayout(onlineVLayout);
+
+    //将两个流式布局的外层窗口添加到滚动区域中
+    scrollareaLocal->setWidget(imgfixWidgetLocal);
+    scrollareaOnline->setWidget(imgfixWidgetOnline);
 
     //将两个滚动区域添加到imgStacked中
     imgStacked->addWidget(scrollareaLocal);
@@ -190,7 +208,6 @@ void MainWindow::initUI()
                 this->isFirstOnline = false;
             }
         }
-        //刷新设置流式布局的窗口大小，防止界面显示不正确
         this->resizeImgStackedWidget();
     });
 
@@ -509,7 +526,7 @@ void MainWindow::setCorrectBtnToUI(imgType type, int sum)
         }
     }
 
-    //设置一个局部的事件循环，等待1ms，让ui加载完成后进行更新flow大小的操作，这似乎是一个bug
+    //设置一个局部的事件循环，等待1ms，让ui加载完成后进行更新flow大小的操作
 
     QEventLoop eventLoop;
     //设置计时器
@@ -523,6 +540,7 @@ void MainWindow::setCorrectBtnToUI(imgType type, int sum)
     //开始事件循环
     eventLoop.exec();
     //更新窗口大小
+
     resizeImgStackedWidget();
 }
 
@@ -562,6 +580,7 @@ void MainWindow::acceptReadFinish(int index, imgType type, QImage* img)
 //接收下载失败的信号
 void MainWindow::acceptDLFailed(int index)
 {
+    qDebug() << "下载失败";
     DStyle *style = new DStyle;
     this->imgsOnline[index]->setIcon(style->standardIcon(DStyle::SP_CloseButton));
 }
@@ -578,8 +597,20 @@ void MainWindow::resizeImgStackedWidget()
             return;
         }
         //设置窗口固定大小
-        imgWidgetLocal->setFixedWidth(scrollareaLocal->width());
         imgWidgetLocal->setFixedHeight(flowHeight);
+
+
+        //滚动区域宽度
+        int width = scrollareaLocal->width();
+        //图片按钮宽度
+        int btnWidth = ICONBTNSIZE.width();
+        //计算一行最多的item数量
+        int maxRowCount = (width-spaceSize) / (btnWidth+spaceSize);
+        //根据item数量计算刘布局widget最大宽度
+        int maxWidth = maxRowCount * btnWidth + (maxRowCount + 1) * spaceSize;
+        imgWidgetLocal->setFixedWidth(maxWidth);
+        imgfixWidgetLocal->setFixedWidth(scrollareaLocal->width());
+        imgfixWidgetLocal->setFixedHeight(imgWidgetLocal->height());
     }
     //在线壁纸界面，与本地同理
     else {
@@ -587,7 +618,17 @@ void MainWindow::resizeImgStackedWidget()
         if(flowHeight < 0) {
             return;
         }
-        imgWidgetOnline->setFixedWidth(scrollareaOnline->width());
         imgWidgetOnline->setFixedHeight(flowHeight);
+
+
+        int width = scrollareaOnline->width();
+        int btnWidth = ICONBTNSIZE.width();
+        int maxRowCount = (width-spaceSize) / (btnWidth+spaceSize);
+        int maxWidth = maxRowCount * btnWidth + (maxRowCount + 1) * spaceSize;
+        imgWidgetOnline->setFixedWidth(maxWidth);
+        imgfixWidgetOnline->setFixedWidth(scrollareaOnline->width());
+        imgfixWidgetOnline->setFixedHeight(imgWidgetOnline->height());
     }
+
+
 }

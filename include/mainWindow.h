@@ -57,8 +57,11 @@ private:
     DFlowLayout *imgFlowLocal;          //本地壁纸flow
     DWidget *imgWidgetOnline;           //在线壁纸窗口
     DWidget *imgWidgetLocal;            //本地壁纸窗口
-    DScrollArea *scrollareaLocal;
-    DScrollArea *scrollareaOnline;
+    DScrollArea *scrollareaLocal;       //本地壁纸滚动区域
+    DScrollArea *scrollareaOnline;      //在线壁纸滚动区域
+
+    DWidget *imgfixWidgetLocal;         //本地壁纸外层窗口，在scrollArea内一层，用于居中其内部的Widget(该widget为流布局)，实现流布局的居中
+    DWidget *imgfixWidgetOnline;        //在线壁纸外层窗口，...
 
     QNetworkAccessManager  *networkAccessManager;   //网络连接管理
 

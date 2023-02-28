@@ -31,7 +31,7 @@ cd dtkcommon
 sudo apt build-dep .
 # 构建
 dpkg-buildpackage -us -uc -b
-# 安装
+# 安装上一级目录的所有deb文件，若上一级有其他的deb文件，请手动安装
 sudo dpkg -i ../*.deb
 ```
 ##### 安装 dtkcore
@@ -140,6 +140,7 @@ target_link_libraries(DTKWallpaperManager PRIVATE
 //代码截取自mainWindow.h
 class MainWindow {
 private:
+    QThreadPool *pool;                  //全局线程池
     DListView *funcModLV;               //在线壁纸和本地壁纸的功能模块
     DStackedWidget *mainStacked;        //最外层stack，一个显示主界面，一个显示图片详情
     DStackedWidget *imgStacked;         //图片流界面deepin
@@ -152,6 +153,13 @@ private:
     DWidget *imgWidgetLocal;            //本地壁纸窗口
     DScrollArea *scrollareaLocal;       //本地壁纸滚动区域
     DScrollArea *scrollareaOnline;      //在线壁纸滚动区域
+    DWidget *imgfixWidgetLocal;         //本地壁纸外层窗口，在scrollArea内一层，用于居中其内部的Widget(该widget为流布局)，实现流布局的居中
+    DWidget *imgfixWidgetOnline;        //在线壁纸外层窗口，...
+    QNetworkAccessManager  *networkAccessManager;   //网络连接管理
+    QVector<DIconButton*> imgsLocal;    //本地图片
+    QVector<DIconButton*> imgsOnline;   //在线图片
+    QHash<int, QImage*> imgsLocalMap;   //从硬盘读取的本地图片
+    QHash<int, QImage*> imgsOnlineMap;  //从硬盘中读取的在线图片
     DPushButton *returnBtn;             //返回按键
     DPushButton *funcBtn;               //功能按键（刷新页面，设置壁纸）
     DPushButton *saveBtn;               //保存壁纸按钮
@@ -164,15 +172,19 @@ private:
 void MainWindow::initUI()
 {
     //设置titleBar部分
-    returnBtn = new DPushButton("返回");
+    returnBtn = new DPushButton();
     funcBtn = new DPushButton("再来一组");
-    spinner = new DSpinner;
+    spinner = new DSpinner();
     saveBtn = new DPushButton("保存壁纸");
     //设置加入titlebar各个组件的默认大小
-    returnBtn->setFixedWidth(50);
+    returnBtn->setFixedWidth(40);
     saveBtn->setFixedWidth(80);
     funcBtn->setFixedWidth(80);
     spinner->setFixedSize(30,30);
+
+    returnBtn->setIcon(QIcon(":/images/left-arrow.png"));
+    returnBtn->setIconSize(QSize(20,20));
+
     //将设置的组件默认隐藏
     returnBtn->hide();
     funcBtn->hide();
@@ -197,7 +209,10 @@ void MainWindow::initUI()
     model->appendRow(new DStandardItem("本地壁纸"));
     model->appendRow(new DStandardItem("在线壁纸"));
     funcModLV->setModel(model);
+    //设置固定大小
     funcModLV->setFixedWidth(150);
+    //设置DListView不可编辑
+    funcModLV->setEditTriggers(DListView::EditTrigger::NoEditTriggers);
 
     //右侧图片流显示区域
     //新建滚动区域
@@ -207,23 +222,36 @@ void MainWindow::initUI()
     imgStacked  = new DStackedWidget();
     imgWidgetLocal = new DWidget();
     imgWidgetOnline = new DWidget();
-    imgFlowLocal = new DFlowLayout();
-    imgFlowOnline = new DFlowLayout();
+
+    imgFlowLocal = new DFlowLayout(imgWidgetLocal);
+    imgFlowOnline = new DFlowLayout(imgWidgetOnline);
 
     //设置流式布局属性
     imgFlowLocal->setSpacing(20);
     imgFlowOnline->setSpacing(20);
-    //设置flow方向
-    imgFlowLocal->setFlow(QListView::Flow::LeftToRight);
-    imgFlowOnline->setFlow(QListView::Flow::LeftToRight);
+
 
     //将本地和在线的图片窗口设置为流式布局
     imgWidgetLocal->setLayout(imgFlowLocal);
     imgWidgetOnline->setLayout(imgFlowOnline);
 
-    //将两个流式布局的窗口添加到滚动区域中
-    scrollareaLocal->setWidget(imgWidgetLocal);
-    scrollareaOnline->setWidget(imgWidgetOnline);
+    //新建一个窗体，内部存放流布局的另外一个widget，可实现流布局窗口的居中
+    QVBoxLayout *localVLayout = new QVBoxLayout();
+    //设置居中
+    localVLayout->setAlignment(Qt::AlignHCenter);
+    imgfixWidgetLocal = new DWidget();
+    localVLayout->addWidget(imgWidgetLocal);
+    imgfixWidgetLocal->setLayout(localVLayout);
+
+    QVBoxLayout *onlineVLayout = new QVBoxLayout();
+    onlineVLayout->setAlignment(Qt::AlignHCenter);
+    imgfixWidgetOnline = new DWidget();
+    onlineVLayout->addWidget(imgWidgetOnline);
+    imgfixWidgetOnline->setLayout(onlineVLayout);
+
+    //将两个流式布局的外层窗口添加到滚动区域中
+    scrollareaLocal->setWidget(imgfixWidgetLocal);
+    scrollareaOnline->setWidget(imgfixWidgetOnline);
 
     //将两个滚动区域添加到imgStacked中
     imgStacked->addWidget(scrollareaLocal);
