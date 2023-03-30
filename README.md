@@ -3,6 +3,9 @@
 
 > github仓库：https://github.com/mhduiy/DTKWallpaperManager
 
+### 展示图
+![main](https://mhduiy-1310556463.cos.ap-chongqing.myqcloud.com/img/dis.png)
+
 ## 构建步骤
 ```bash
 mkdir build

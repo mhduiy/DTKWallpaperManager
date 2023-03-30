@@ -1,7 +1,9 @@
 #ifndef GLOBAL_H
 #define GLOBAL_H
+#include <QString>
+#include <QDir>
 
-#define CACHEPATH "/home/mhduiy/.config/wallpaperDemo/cache/"
+const QString CACHEPATH = QDir::homePath() + QDir::separator() + ".config/wallpaperDemo/cache/";
 
 
 enum class imgType {
